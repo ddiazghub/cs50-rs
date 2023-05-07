@@ -6,4 +6,3 @@ pub mod copy;
 pub mod img;
 pub mod recover;
 pub mod decimal;
-pub mod forth;

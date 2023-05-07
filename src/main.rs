@@ -5,6 +5,8 @@ mod week1;
 mod week2;
 mod week3;
 mod week4;
+mod week5;
+mod week6;
 
 fn main() {
     // week1::hello::main();
@@ -24,5 +26,9 @@ fn main() {
     // week4::copy::main();
     // week4::filter::main();
     // week4::recover::main();
-    week4::forth::main();
+    // week5::inheritance::main();
+    // week5::speller::main();
+    // week6::bank::main();
+    // week6::figlet::main();
+    week6::jar::main();
 }

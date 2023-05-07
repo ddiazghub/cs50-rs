@@ -1,9 +1,6 @@
 use std::fs::File;
 use std::{env, io};
 use std::io::{Read, Write};
-use std::ops::{Index, IndexMut, Range, RangeBounds};
-use std::slice::SliceIndex;
-use std::mem;
 
 const HEADER_SIZE: usize = 44;
 
