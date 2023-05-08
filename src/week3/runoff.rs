@@ -3,13 +3,21 @@ use super::helpers;
 use std::collections::{HashMap, HashSet};
 use std::i32;
 
+/// A candidate participating in the current election.
 struct Candidate {
+    /// The candidate's name.
     pub name: String,
+    /// The number of votes that the candidate has.
     pub votes: i32,
+    /// Whether the candidate has been eliminated or not.
     pub eliminated: bool
 }
 
 impl Candidate {
+    /// Creates a new candidate with the given name.
+    ///
+    /// # Arguments
+    /// * `name` - The candidate's name.
     pub fn new(name: String) -> Self {
         Candidate {
             name,
@@ -28,25 +36,32 @@ impl Clone for Candidate {
     }
 }
 
+/// The result of a runoff election.
 enum RunoffTabulationResult {
+    /// A candidate won the election.
     Win(Candidate),
+    /// A candidate has been eliminated from the election. The election continues with another round.
     Elimination(Candidate),
+    /// The result of the election is a tie.
     Tie
 }
 
 pub fn main() {
+    // Reads candidates from command line args.
     let args: Vec<String> = env::args().collect();
 
     if args.len() < 3 {
         panic!("Usage:\n ./runoff <candidate1> <candidate2> <...> <candidateN>\nMinimun number of candidates is 2");
     }
 
+    // Creates a hashmap which allows candidate indexing by name.
     let mut candidates: HashMap<String, Candidate> = (&args[1..])/*(&args[1..])*/
         .iter()
         .enumerate()
         .map(|(i, candidate)| (candidate.to_lowercase(), Candidate::new(candidate.clone())))
         .collect();
 
+    // Reads number of voters in the election.
     let number_of_voters: i32 = loop {
         match helpers::read_line("Number of voters: ").unwrap().parse::<i32>() {
             Ok(n) => break n,
@@ -54,8 +69,10 @@ pub fn main() {
         };
     };
 
+    // Read votes.
     let mut votes = vote(number_of_voters, &mut candidates);
-    
+
+    // Tabulates results
     let result = loop {
         match tabulate(&mut votes, &mut candidates) {
             RunoffTabulationResult::Win(candidate) => break format!("Winner is {}", candidate.name),
@@ -73,6 +90,11 @@ pub fn main() {
     println!("{}", result);
 }
 
+/// Votes the given number of times.
+///
+/// # Arguments
+/// * `number_of_voters` - Number of voters in the election.
+/// * `candidates` - The candidate table. Votes for candidates which are not in this table are not allowed.
 fn vote(number_of_voters: i32, candidates: &mut HashMap<String, Candidate>) -> Vec<Vec<String>> {
     (0..number_of_voters).map(|_| {
         let mut voted: HashSet<String> = HashSet::new();
@@ -100,6 +122,11 @@ fn vote(number_of_voters: i32, candidates: &mut HashMap<String, Candidate>) -> V
     }).collect()
 }
 
+/// Tabulates the results of a runoff election round.
+///
+/// # Arguments
+/// * `votes` - The election votes.
+/// * `candidates` - The candidate table. Votes for candidates which are not in this table are not allowed.
 fn tabulate(votes: &Vec<Vec<String>>, candidates: &mut HashMap<String, Candidate>) -> RunoffTabulationResult {
     let number_of_candidates: i32 = votes[0].len() as i32;
 

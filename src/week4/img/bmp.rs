@@ -6,31 +6,46 @@ use num_traits::PrimInt;
 
 use super::helpers;
 
+// A bitmap file's header size in bytes.
 pub const BMP_HEADER_SIZE: usize= 14;
+
+// A bitmap file's info header size in bytes.
 pub const BMP_INFO_HEADER_SIZE: usize = 40;
 
+// Edge detection kernel.
 const KERNEL: [[i32; 3]; 3] = [
     [-1, -2, -1],
     [0, 0, 0],
     [1, 2, 1]
 ];
 
+/// An RGB color.
 #[derive(Debug, Copy, Clone)]
 pub struct Color<T: PrimInt>(T, T, T);
 
 impl Color<u8> {
+    /// Serializes a color to big endian bytes.
     pub fn to_be_bytes(&self) -> [u8; 3] {
         [self.0, self.1, self.2]
     }
 
+    /// Deserializes a color from big endian bytes.
+    ///
+    /// # Arguments
+    /// * `bytes` - The byte buffer.
     pub fn from_be_bytes(bytes: [u8; 3]) -> Self {
         Self(bytes[0], bytes[1], bytes[2])
     }
 
+    // Serializes a color to little endian bytes.
     pub fn to_le_bytes(&self) -> [u8; 3] {
         [self.2, self.1, self.0]
     }
 
+    /// Deserializes a color from little endian bytes.
+    ///
+    /// # Arguments
+    /// * `bytes` - The byte buffer.
     pub fn from_le_bytes(bytes: [u8; 3]) -> Self {
         Self(bytes[2], bytes[1], bytes[0])
     }
@@ -39,6 +54,7 @@ impl Color<u8> {
 impl <T: PrimInt> Add for Color<T> {
     type Output = Self;
 
+    // Adds 2 colors.
     fn add(self, other: Self) -> Self::Output {
         Self(self.0 + other.0, self.1 + other.1, self.2 + other.2)
     }
@@ -47,6 +63,7 @@ impl <T: PrimInt> Add for Color<T> {
 impl <T: PrimInt> Mul for Color<T> {
     type Output = Self;
 
+    // Multiples 2 colors.
     fn mul(self, other: Self) -> Self::Output {
         Self(self.0 * other.0, self.1 * other.1, self.2 * other.2)
     }
@@ -55,11 +72,13 @@ impl <T: PrimInt> Mul for Color<T> {
 impl <T: PrimInt> Mul<T> for Color<T> {
     type Output = Self;
 
+    // Multiplies a color by a scalar.
     fn mul(self, other: T) -> Self::Output {
         Self(self.0 * other, self.1 * other, self.2 * other)
     }
 }
 
+/// The available types of image filters.
 pub enum ImageFilter {
     GrayScale,
     Sepia,
@@ -68,6 +87,7 @@ pub enum ImageFilter {
     Edges
 }
 
+/// A bitmap's file header.
 pub struct BMPFileHeader {
     pub bf_type: u16,
     pub bf_size: u32,
@@ -77,6 +97,10 @@ pub struct BMPFileHeader {
 }
 
 impl BMPFileHeader {
+    /// Creates a bitmap header from a byte buffer.
+    ///
+    /// # Arguments
+    /// * `bytes` - The byte buffer.
     pub fn new(bytes: &[u8]) -> Self {
         BMPFileHeader {
             bf_type: u16::from_le_bytes(helpers::slice2(&bytes[0..2])),
@@ -87,6 +111,7 @@ impl BMPFileHeader {
         }
     }
 
+    /// Serializes a bitmap file's header to a buffer of bytes.
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut bytes = Vec::new();
         bytes.extend_from_slice(&self.bf_type.to_le_bytes());
@@ -98,6 +123,7 @@ impl BMPFileHeader {
     }
 }
 
+/// A bitmap's file info header.
 pub struct BMPInfoHeader {
     pub bi_size: u32,
     pub bi_width: i32,
@@ -113,6 +139,10 @@ pub struct BMPInfoHeader {
 }
 
 impl BMPInfoHeader {
+    /// Creates a bitmap info header from a byte buffer.
+    ///
+    /// # Arguments
+    /// * `bytes` - The byte buffer.
     pub fn new(bytes: &[u8]) -> Self {
         BMPInfoHeader {
             bi_size: u32::from_le_bytes(helpers::slice4(&bytes[0..4])),
@@ -129,6 +159,7 @@ impl BMPInfoHeader {
         }
     }
 
+    /// Serializes a bitmap file's header to a buffer of bytes.
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut bytes = Vec::new();
         bytes.extend_from_slice(&self.bi_size.to_le_bytes());
@@ -146,13 +177,21 @@ impl BMPInfoHeader {
     }
 }
 
+/// A 24 bit bitmap file.
 pub struct BMPFile24 {
+    /// The file's header.
     pub bf_header: BMPFileHeader,
+    /// The file's info header.
     pub bi_header: BMPInfoHeader,
+    /// The file's pixel color data..
     pub data: Vec<Vec<Color<u8>>>
 }
 
 impl BMPFile24 {
+    /// Reads a bitmap file and creates an instance of this struct.
+    ///
+    /// # Arguments
+    /// * `filename` - The bitmap file's name.
     pub fn new(filename: &str) -> io::Result<Self> {
         if BMPFile24::is_bmp_filename(filename) {
             let mut file = File::open(filename)?;
@@ -198,6 +237,12 @@ impl BMPFile24 {
         }
     }
 
+    /// Applies a transform to this image, writes the transformed image to an output file.
+    ///
+    /// # Arguments
+    /// * `out` - The output file.
+    /// * `transform` - Closure which receives the image's pixel data and the position of the current pixel.
+    /// Returns a new color for each pixel which will be writen to the output file.
     pub fn transform<F: Fn(&Vec<Vec<Color<u8>>>, usize, usize) -> Color<u8>>(&self, out: &str, transform: F) -> io::Result<()> {
         if Self::is_bmp_filename(out) {
             let mut outfile: File = File::create(out)?;
@@ -226,10 +271,19 @@ impl BMPFile24 {
         }
     }
 
+    /// Copies this image to an output file.
+    ///
+    /// # Arguments
+    /// * `out` - The output file.
     pub fn copy(&self, out: &str) -> io::Result<()> {
         self.transform(out, |image: &Vec<Vec<Color<u8>>>, i, j| image[i][j].clone())
     }
 
+    /// Applies a filer to this image, writing the transformed image to an output file.
+    ///
+    /// # Arguments
+    /// * `out` - The output file.
+    /// * `filter_type` - Type of filter to apply.
     pub fn filter(&self, out: &str, filter_type: ImageFilter) -> io::Result<()> {
         let action: fn(&Vec<Vec<Color<u8>>>, usize, usize) -> Color<u8> = match filter_type {
             ImageFilter::GrayScale => |image: &Vec<Vec<Color<u8>>>, i, j| {
@@ -311,6 +365,10 @@ impl BMPFile24 {
         self.transform(out, action)
     }
 
+    /// Check if the given filename belongs to a BMP file.
+    ///
+    /// # Arguments
+    /// * `filename` - The file's name.
     pub fn is_bmp_filename(filename: &str) -> bool {
         match filename.split('.').last() {
             Some("bmp") => true,
@@ -319,6 +377,12 @@ impl BMPFile24 {
     }
 }
 
+/// Creates a range of indices to iterate in an array or vec. The indices will be adjacent to the current index.
+///
+/// # Arguments
+/// * `idx` - Current index.
+/// * `diff` - How many indices to include before and after the current index.
+/// * `range` - Range of accepted index values.
 fn adjacent_range(idx: usize, diff: usize,  range: RangeInclusive<usize>) -> RangeInclusive<usize> {
     let (&start, &end) = (range.start(), range.end());
 

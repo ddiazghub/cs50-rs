@@ -2,18 +2,27 @@ use std::fs::File;
 use std::{env, io};
 use std::io::{Read, Write};
 
+/// WAV file header size in bytes.
 const HEADER_SIZE: usize = 44;
 
+/// Integer byte endianness.
 enum Endianness {
     Big,
     Little
 }
 
+/// Deserializes value from a stream of bytes.
 trait FromBytes {
+    /// Deserializes value from a stream of bytes.
+    ///
+    /// # Arguments
+    /// * `bytes` - The element's byte representation.
+    /// * `endianness` - Endianness of the bytes.
     fn from_bytes(bytes: &[u8], endianness: Endianness) -> Self;
 }
 
 impl FromBytes for String {
+    // Deserialize string from bytes.
     fn from_bytes(bytes: &[u8], endianness: Endianness) -> Self {
         match endianness {
             Endianness::Big => bytes.iter().map(|b| char::from(*b)).collect(),
@@ -23,6 +32,7 @@ impl FromBytes for String {
 }
 
 impl FromBytes for u32 {
+    // Deserialize u32 from bytes.
     fn from_bytes(bytes: &[u8], endianness: Endianness) -> Self {
         if bytes.len() != 4 {
             panic!("Bytes array should have a length of 4")
@@ -36,6 +46,7 @@ impl FromBytes for u32 {
 }
 
 impl FromBytes for u16 {
+    // Deserialize u16 from bytes.
     fn from_bytes(bytes: &[u8], endianness: Endianness) -> Self {
         if bytes.len() != 2 {
             panic!("Bytes array should have a length of 2")
@@ -48,6 +59,7 @@ impl FromBytes for u16 {
     }
 }
 
+/// A WAV file's header.
 #[derive(Debug)]
 struct WavAudioFileHeader {
     pub chunk_id: String,
@@ -66,6 +78,10 @@ struct WavAudioFileHeader {
 }
 
 impl WavAudioFileHeader {
+    /// Creates a new WAV header from a buffer of bytes.
+    ///
+    /// # Arguments
+    /// * `bytes` - The byte buffer.
     pub fn new(bytes: &[u8; HEADER_SIZE]) -> Self {
         WavAudioFileHeader {
             chunk_id: String::from_bytes(&bytes[0..4], Endianness::Big),
@@ -84,6 +100,7 @@ impl WavAudioFileHeader {
         }
     }
 
+    /// Serializes a new WAV header to a buffer of bytes.
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut bytes = Vec::new();
         bytes.extend_from_slice(self.chunk_id.as_bytes());
@@ -103,12 +120,21 @@ impl WavAudioFileHeader {
     }
 }
 
+/// A 16 bit WAV audio file.
+///
+/// # Arguments
+/// * `header` - The file's header.
+/// * `data` - The audio samples.
 struct WavAudioFile16 {
     pub header: WavAudioFileHeader,
     pub data: Vec<i16>
 }
 
 impl WavAudioFile16 {
+    /// Reads a WAV audio file and creates a new instance of the current struct.
+    ///
+    /// # Arguments
+    /// * `filename` - The file's name.
     pub fn new(filename: &str) -> io::Result<Self> {
         if WavAudioFile16::is_wav_filename(filename) {
             let mut file = File::open(filename)?;
@@ -119,6 +145,7 @@ impl WavAudioFile16 {
             if header.bits_per_sample != 16 {
                 return Err(io::Error::new(io::ErrorKind::InvalidData, "The file is not a 16 bit WAV file"));
             }
+
             let mut buffer = vec![0; header.sub_chunk2_size as usize];
             file.read(&mut buffer)?;
             let mut data: Vec<i16> = Vec::new();
@@ -136,6 +163,12 @@ impl WavAudioFile16 {
         }
     }
 
+    /// Changes the file's volume by multiplying the value of each sample by a scale value.
+    /// Writes the result to an output file.
+    ///
+    /// # Arguments
+    /// * `out` - The output file.
+    /// * `scale` - The value used to scale the volume.
     pub fn change_volume(&self, out: &str, scale: f64) -> io::Result<()> {
         if WavAudioFile16::is_wav_filename(out) {
             let mut outfile: File = File::create(out)?;
@@ -152,6 +185,10 @@ impl WavAudioFile16 {
         }
     }
 
+    /// Checks if the file's name belongs to a WAV file.
+    ///
+    /// # Arguments
+    /// * `filename` - Filename to check.
     pub fn is_wav_filename(filename: &str) -> bool {
         match filename.split('.').last() {
             Some("wav") => true,
@@ -161,18 +198,21 @@ impl WavAudioFile16 {
 }
 
 pub fn main() {
-    let args: Vec<String> = env::args().collect();/*vec![String::from(""), String::from("input.wav"), String::from("output.wav"), String::from("2")]*/
+    // Reads input file, output file and volume scale from command line args.
+    let args: Vec<String> = env::args().collect();
 
     let (input, output, scale): (&str, &str, f64) = match &args[1..] {
         [i, o, s] => (i, o, s.parse().expect("Scale should be a number")),
         _ => panic!("Usage:\n./volume <input> <output> <scale factor>")
     };
 
+    // Reads the WAV file
     let file = match WavAudioFile16::new(input) {
         Ok(f) => f,
         Err(e) => panic!("{:?}", e)
     };
 
+    // Changes the file's volume and writes the scaled samples to the output file.
     match file.change_volume(output, scale) {
         Err(e) => panic!("{:?}", e),
         _ => ()

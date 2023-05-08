@@ -1,43 +1,36 @@
 use std::fmt::Display;
+use std::env;
+use rand::{self, seq::SliceRandom};
 
-use rand::{self, Rng};
-
+/// Allowed alleles
 static ALLELES: [char; 3] = ['A', 'B', 'O'];
 
-pub trait RandChoice<T> {
-    fn rand_choice(&self) -> &T;
-
-    fn rand_choices(&self, n: u32) -> Vec<&T> {
-        (0..n)
-            .map(|_| self.rand_choice())
-            .collect()
-    }
-}
-
-impl<T> RandChoice<T> for [T] {
-    fn rand_choice(&self) -> &T {
-        let index = rand::thread_rng().gen_range(0..self.len());
-        &self[index]
-    }
-}
-
+/// A person with parents and 2 alleles.
 pub struct Person {
+    /// The person's parents. A person may not have parents.
     parents: Option<Box<(Person, Person)>>,
+    /// The person's alleles.
     alleles: [char; 2]
 }
 
 impl Person {
+    /// Creates a new person with no parents and random alleles.
     pub fn new() -> Self {
-        let alleles = ALLELES.rand_choices(2);
+        let mut rng = rand::thread_rng();
 
         Self {
             parents: None,
-            alleles: [*alleles[0], *alleles[1]]
+            alleles: [*ALLELES.choose(&mut rng).unwrap(), *ALLELES.choose(&mut rng).unwrap()]
         }
     }
 
+    /// Creates a person with the given parents. Allels are randomly chosen from parents.
+    ///
+    /// # Arguments
+    /// * `parents` - The person's parents.
     pub fn with_parents(parents: (Person, Person)) -> Self {
-        let alleles = [*parents.0.alleles.rand_choice(), *parents.1.alleles.rand_choice()];
+        let mut rng = rand::thread_rng();
+        let alleles = [*parents.0.alleles.choose(&mut rng).unwrap(), *parents.1.alleles.choose(&mut rng).unwrap()];
 
         Self {
             parents: Some(Box::new(parents)),
@@ -45,10 +38,18 @@ impl Person {
         }
     }
 
+    /// Creates a family tree by recursively creating generations.
+    ///
+    /// # Arguments
+    /// * `generations` - The number of generations in the family.
     pub fn create_family(generations: usize) -> Self {
         Self::recurse_family(generations)
     }
 
+    /// Creates a family tree by recursively creating generations.
+    ///
+    /// # Arguments
+    /// * `generations` - The number of generations left to create.
     fn recurse_family(gens_left: usize) -> Self {
         match gens_left {
             1 => Self::new(),
@@ -59,6 +60,10 @@ impl Person {
         }
     }
 
+    /// Formats the person's family tree as a string.
+    ///
+    /// # Arguments
+    /// * `generation` - The current generation's number.
     fn as_string(&self, generation: usize) -> String {
         let string = "\t".repeat(generation) + "(Generation " + &generation.to_string() + "): Blood type " + &self.alleles.into_iter().collect::<String>();
 
@@ -76,6 +81,13 @@ impl Display for Person {
 }
 
 pub fn main() {
-    let family_tree = Person::create_family(3);
+    // Reads the family tree's height from command line args.
+    let height: usize = env::args().nth(1)
+        .unwrap_or("3".to_string())
+        .parse()
+        .unwrap();
+
+    // Creates and prints the family tree.
+    let family_tree = Person::create_family(height);
     println!("{family_tree}");
 }

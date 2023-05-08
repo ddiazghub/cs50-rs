@@ -26,9 +26,13 @@ fn main() {
     // week4::copy::main();
     // week4::filter::main();
     // week4::recover::main();
-    // week5::inheritance::main();
+    week5::inheritance::main();
     // week5::speller::main();
     // week6::bank::main();
     // week6::figlet::main();
-    week6::jar::main();
+    // week6::jar::main();
+    // week6::seven_day_average::main();
+    // week6::taqueria::main();
+    // week6::world_cup::main();
+    // week6::dna::main();
 }

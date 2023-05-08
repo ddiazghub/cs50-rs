@@ -3,6 +3,7 @@ use std::collections::VecDeque;
 use rand::Rng;
 use std::time::{Instant, Duration};
 
+/// An indexable data type that can be sorted.
 pub trait Sortable<T> {
     fn selection_sort(&mut self);
     fn bubble_sort(&mut self);
@@ -108,14 +109,17 @@ impl<T: Ord + Clone> Sortable<T> for [T] {
 }
 
 pub fn main() {
+    // Loads test data.
     let mut array1: [i32; 10000] = (0..10000).collect::<Vec<i32>>().try_into().unwrap();
 
+    //  Clones test data for each algorithm.
     rand::thread_rng().fill(&mut array1[..]);
     let mut array2 = array1.clone();
     let mut array3 = array1.clone();
     let mut array4 = array1.to_vec();
     let mut array5 = array1.clone();
 
+    // Benchmarks each algorithm.
     let mut start = Instant::now();
     array1.selection_sort();
     println!("Selection Sort: {}s", start.elapsed().as_secs_f64());
@@ -137,10 +141,19 @@ pub fn main() {
     println!("Quicksort: {}s", start.elapsed().as_secs_f64());
 }
 
+/// Sorts an array using quicksort.
+///
+/// # Arguments
+/// * `array` - The array to sort.
 pub fn quicksort<T: Ord + Clone>(array: &mut [T]) {
     quicksort_by(array, &|smaller, greater| smaller < greater);
 }
 
+/// Sorts an array using quicksort. With the specified comparator function.
+///
+/// # Arguments
+/// * `array` - The array to sort.
+/// * `is_smaller` - Function which specifies if the current element is smaller than the other.
 pub fn quicksort_by<T: Clone, F: Fn(&T, &T) -> bool>(array: &mut [T], is_smaller: &F) {
     let length = array.len();
 
@@ -151,7 +164,11 @@ pub fn quicksort_by<T: Clone, F: Fn(&T, &T) -> bool>(array: &mut [T], is_smaller
     }
 }
 
-
+/// Partitions a quicksort array into 2 subarrays.
+///
+/// # Arguments
+/// * `array` - The array to sort.
+/// * `is_smaller` - Function which specifies if the current element is smaller than the other.
 fn quicksort_partition<T: Clone, F: Fn(&T, &T) -> bool>(array: &mut [T], is_smaller: &F) -> usize {
     let length: usize = array.len();
 
@@ -178,6 +195,11 @@ fn quicksort_partition<T: Clone, F: Fn(&T, &T) -> bool>(array: &mut [T], is_smal
     pivot_position
 }
 
+/// Selects a pivot and positions it at the end of the array.
+///
+/// # Arguments
+/// * `array` - The array to sort.
+/// * `is_smaller` - Function which specifies if the current element is smaller than the other.
 fn position_pivot<T: Clone, F: Fn(&T, &T) -> bool>(array: &mut [T], is_smaller: &F) {
     let length: usize = array.len();
     let mid: usize = length / 2;
@@ -193,6 +215,10 @@ fn position_pivot<T: Clone, F: Fn(&T, &T) -> bool>(array: &mut [T], is_smaller: 
     array.swap(pivot_position, length - 1);
 }
 
+/// Recursively sorts an array using the merge sort algorithm.
+///
+/// # Arguments
+/// * `sortable` - The array to sort.
 fn merge<T: Ord + Clone>(sortable: &mut Vec<T>) {
     let length = sortable.len();
 
